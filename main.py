@@ -28,6 +28,26 @@ app = FastAPI()
 session_data = {}
 
 # ----------------------------
+# HEALTH CHECK & INFO ENDPOINTS
+# ----------------------------
+@app.get("/")
+def root():
+    return {
+        "status": "running",
+        "service": "AI Scam Honeypot Agent",
+        "endpoints": {
+            "health": "GET /health",
+            "api_docs": "GET /docs",
+            "honeypot": "POST /honeypot"
+        }
+    }
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "service": "AI Scam Honeypot Agent"}
+
+# ----------------------------
 # INPUT SCHEMA
 # ----------------------------
 class ChatMessage(BaseModel):

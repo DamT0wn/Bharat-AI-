@@ -96,18 +96,22 @@ async def root_honeypot(
     # Try to parse the request body
     try:
         body = await request.json()
+        print(f"DEBUG: Raw request body: {body}")
+        
+        # Ensure metadata exists
+        if "metadata" not in body:
+            body["metadata"] = {}
+        
         req = RequestPayload(**body)
-    except:
-        # If no valid body provided, create a default test request
-        req = RequestPayload(
-            sessionId="tester-session",
-            message=ChatMessage(
-                sender="scammer",
-                text="Your account is blocked. Send money urgently to unblock it.",
-                timestamp=int(datetime.now().timestamp())
-            ),
-            conversationHistory=[]
-        )
+        print(f"DEBUG: Successfully parsed RequestPayload")
+    except ValidationError as e:
+        print(f"ERROR: Validation failed: {e}")
+        print(f"ERROR: Body was: {body}")
+        raise HTTPException(status_code=400, detail=f"Invalid request body: {str(e)}")
+    except Exception as e:
+        print(f"ERROR: Failed to parse request: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid request format: {str(e)}")
+    
     return honeypot_endpoint(req, x_api_key)
 
 
@@ -268,3 +272,9 @@ def honeypot_endpoint(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+# ✅ GUVI Tester Compatibility Route
+@app.post("/")
+def guvi_root(req: RequestPayload, x_api_key: str = Header(None)):
+    return honeypot_endpoint(req, x_api_key)

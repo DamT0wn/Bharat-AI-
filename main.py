@@ -1,94 +1,178 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+from typing import List, Optional
 import google.generativeai as genai
-import os
-import re
+import os, re, requests
 from dotenv import load_dotenv
 
-# Load API Key
+# ----------------------------
+# CONFIG
+# ----------------------------
 load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+SECRET_KEY = os.getenv("SECRET_API_KEY")
+
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
+    model = genai.GenerativeModel("models/gemini-flash-latest")
+else:
+    print("Warning: GEMINI_API_KEY not found in .env")
+    model = None
+
+GUVI_CALLBACK = "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
 
 app = FastAPI()
 
+# In-memory session store
+session_data = {}
 
-# -------------------------------
-# Request Body
-# -------------------------------
-class MessageRequest(BaseModel):
-    message: str
+# ----------------------------
+# INPUT SCHEMA
+# ----------------------------
+class ChatMessage(BaseModel):
+    sender: str
+    text: str
+    timestamp: int
 
 
-# -------------------------------
-# Scam Detection Endpoint
-# -------------------------------
-@app.post("/detect")
-def detect_scam(req: MessageRequest):
+class RequestPayload(BaseModel):
+    sessionId: str
+    message: ChatMessage
+    conversationHistory: List[ChatMessage] = []
+    metadata: Optional[dict] = None
+
+
+# ----------------------------
+# INTELLIGENCE EXTRACTION
+# ----------------------------
+def extract_intel(text):
+    return {
+        "bankAccounts": re.findall(r"\b\d{9,18}\b", text),
+        "upiIds": re.findall(r"[a-zA-Z0-9.\-_]+@[a-zA-Z]+", text),
+        "phishingLinks": re.findall(r"https?://\S+", text),
+        "phoneNumbers": re.findall(r"\+91\d{10}", text),
+        "suspiciousKeywords": [
+            word for word in ["urgent", "verify", "blocked", "suspend"]
+            if word in text.lower()
+        ]
+    }
+
+
+# ----------------------------
+# SCAM DETECTION LOGIC
+# ----------------------------
+def detect_scam(msg):
+    scam_signals = [
+        "blocked", "verify", "urgent", "upi",
+        "account suspended", "send money", "click link"
+    ]
+    return any(word in msg.lower() for word in scam_signals)
+
+
+# ----------------------------
+# AI AGENT RESPONSE
+# ----------------------------
+def agent_reply(history_text):
     prompt = f"""
-You are a scam detection system.
+You are an autonomous AI Honeypot Agent.
 
-Classify this message as:
-- scam
-- safe
+Role:
+- Act like a normal Indian user (victim persona)
+- Never reveal scam detection
+- Continue conversation naturally
+- Try to extract UPI IDs, bank accounts, links
 
-Return ONLY JSON like:
-{{
-  "classification": "...",
-  "confidence": 0.0,
-  "reason": "..."
-}}
+Conversation so far:
+{history_text}
 
-Message: {req.message}
+Reply with ONE realistic message only.
 """
 
-    response = genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt)
+    response = model.generate_content(prompt)
+    return response.text.strip()
 
-    return {"result": response.text}
+
+# ----------------------------
+# FINAL CALLBACK
+# ----------------------------
+def send_final_callback(sessionId, intel, total_turns):
+    payload = {
+        "sessionId": sessionId,
+        "scamDetected": True,
+        "totalMessagesExchanged": total_turns,
+        "extractedIntelligence": intel,
+        "agentNotes": "Scammer used urgency tactics and payment redirection"
+    }
+
+    try:
+        requests.post(GUVI_CALLBACK, json=payload, timeout=5)
+    except:
+        print("GUVI callback failed (prototype safe)")
 
 
-# -------------------------------
-# Honeypot Engagement Endpoint
-# -------------------------------
-@app.post("/engage")
-def engage_scammer(req: MessageRequest):
-    prompt = f"""
-You are an AI honeypot agent.
+# ----------------------------
+# MAIN API ENDPOINT
+# ----------------------------
+@app.post("/honeypot")
+def honeypot_endpoint(
+    req: RequestPayload,
+    x_api_key: str = Header(None)
+):
+    # ✅ Authentication
+    if x_api_key != SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
-A scammer is talking to you.
-You must act like a real victim.
+    sessionId = req.sessionId
 
-Try to extract:
-- UPI ID
-- bank account number
-- phishing links
+    # Build conversation text
+    history_text = ""
+    for msg in req.conversationHistory:
+        history_text += f"{msg.sender}: {msg.text}\n"
+    history_text += f"{req.message.sender}: {req.message.text}\n"
 
-Reply naturally.
+    total_turns = len(req.conversationHistory) + 1
 
-Return ONLY JSON:
-{{
-  "reply": "...",
-  "extracted": {{
-    "upi": "...",
-    "account": "...",
-    "link": "..."
-  }}
-}}
+    # Scam detection
+    scamDetected = detect_scam(req.message.text)
 
-Message: {req.message}
-"""
+    if not scamDetected:
+        return {
+            "scamDetected": False,
+            "agentActivated": False,
+            "reply": "Okay, thank you.",
+            "engagementMetrics": {
+                "sessionId": sessionId,
+                "totalTurns": total_turns,
+                "engagementActive": False
+            },
+            "extractedIntelligence": {}
+        }
 
-    response = genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt)
+    # ✅ Agent Activated
+    reply = agent_reply(history_text)
 
-    # Regex Extraction
-    upi = re.findall(r"[a-zA-Z0-9.\-_]+@[a-zA-Z]+", req.message)
-    link = re.findall(r"https?://\S+", req.message)
-    bank = re.findall(r"\b\d{9,18}\b", req.message)
+    # Extract intelligence
+    intel = extract_intel(history_text)
+
+    # Save session
+    session_data[sessionId] = {
+        "intel": intel,
+        "turns": total_turns
+    }
+
+    # ✅ Callback after enough engagement
+    if total_turns >= 5:
+        send_final_callback(sessionId, intel, total_turns)
 
     return {
-        "ai_response": response.text,
-        "regex_extracted": {
-            "upi": upi[0] if upi else None,
-            "link": link[0] if link else None,
-            "bank_account": bank[0] if bank else None
-        }
+        "scamDetected": True,
+        "agentActivated": True,
+        "reply": reply,
+        "engagementMetrics": {
+            "sessionId": sessionId,
+            "totalTurns": total_turns,
+            "engagementActive": True
+        },
+        "extractedIntelligence": intel
     }

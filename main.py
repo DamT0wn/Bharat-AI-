@@ -71,6 +71,14 @@ def root():
     }
 
 
+@app.post("/")
+def root_honeypot(
+    req: RequestPayload,
+    x_api_key: str = Header(None)
+):
+    return honeypot_endpoint(req, x_api_key)
+
+
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "AI Scam Honeypot Agent"}

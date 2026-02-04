@@ -1,9 +1,15 @@
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import google.generativeai as genai
 import os, re, requests
 from dotenv import load_dotenv
+import warnings
+
+# Suppress deprecation warning
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ----------------------------
 # CONFIG
@@ -32,6 +38,10 @@ session_data = {}
 # ----------------------------
 @app.get("/")
 def root():
+    # Serve the HTML frontend
+    static_file = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(static_file):
+        return FileResponse(static_file, media_type="text/html")
     return {
         "status": "running",
         "service": "AI Scam Honeypot Agent",

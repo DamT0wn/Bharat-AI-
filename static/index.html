@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡 AI Scam Honeypot Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            resize: vertical;
+            min-height: 150px;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .test-btn {
+            background: #667eea;
+            color: white;
+        }
+        
+        .test-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .test-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .clear-btn {
+            background: #f5f5f5;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .clear-btn:hover {
+            background: #e8e8e8;
+        }
+        
+        .response-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .response-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .response-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .response-box pre {
+            color: #333;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3a3;
+        }
+        
+        .session-info {
+            background: #f0f4ff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡 AI Scam Honeypot Agent</h1>
+        <p class="subtitle">Detect and engage scammers autonomously</p>
+        
+        <div class="session-info">
+            <strong>Session ID:</strong> <span id="sessionId"></span>
+        </div>
+        
+        <form id="honeypotForm">
+            <div class="form-group">
+                <label for="message">Enter Scam Message:</label>
+                <textarea 
+                    id="message" 
+                    placeholder="Paste the scam message here (e.g., 'Your account is blocked. Send money to unblock...')"
+                    required
+                ></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="test-btn">Test Honeypot Agent</button>
+                <button type="button" class="clear-btn" onclick="clearForm()">Clear</button>
+            </div>
+        </form>
+        
+        <div id="messageContainer"></div>
+        
+        <div class="response-section" id="responseSection" style="display: none;">
+            <h2>🔍 Agent Response:</h2>
+            <div class="response-box">
+                <pre id="responseContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const API_KEY = 'AIzaSyCeeAc7BHRkSJYGzQk62IEJiK8oX_1iYeI';
+        
+        // Generate session ID
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        // Initialize
+        document.getElementById('sessionId').textContent = generateSessionId();
+        
+        document.getElementById('honeypotForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = document.getElementById('message').value.trim();
+            if (!message) {
+                showError('Please enter a message');
+                return;
+            }
+            
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = '<div class="loading">🔄 Processing...</div>';
+            
+            try {
+                const payload = {
+                    sessionId: document.getElementById('sessionId').textContent,
+                    message: {
+                        sender: 'user',
+                        text: message,
+                        timestamp: Date.now()
+                    },
+                    conversationHistory: []
+                };
+                
+                const response = await fetch(`${API_URL}/honeypot`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                messageContainer.innerHTML = '';
+                displayResponse(data);
+                
+            } catch (error) {
+                messageContainer.innerHTML = '';
+                showError(`Error: ${error.message}`);
+            }
+        });
+        
+        function displayResponse(data) {
+            const responseSection = document.getElementById('responseSection');
+            const responseContent = document.getElementById('responseContent');
+            
+            responseContent.textContent = JSON.stringify(data, null, 2);
+            responseSection.style.display = 'block';
+        }
+        
+        function showError(message) {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = `<div class="error">❌ ${message}</div>`;
+        }
+        
+        function clearForm() {
+            document.getElementById('message').value = '';
+            document.getElementById('responseSection').style.display = 'none';
+            document.getElementById('messageContainer').innerHTML = '';
+            document.getElementById('sessionId').textContent = generateSessionId();
+        }
+    </script>
+</body>
+</html>

@@ -89,9 +89,21 @@ def root():
 
 @app.post("/")
 def root_honeypot(
-    req: RequestPayload,
+    req: Optional[RequestPayload] = None,
     x_api_key: str = Header(None)
 ):
+    # If no body provided, create a default test request
+    if req is None:
+        from datetime import datetime
+        req = RequestPayload(
+            sessionId="tester-session",
+            message=ChatMessage(
+                sender="scammer",
+                text="Your account is blocked. Send money urgently to unblock it.",
+                timestamp=int(datetime.now().timestamp())
+            ),
+            conversationHistory=[]
+        )
     return honeypot_endpoint(req, x_api_key)
 
 

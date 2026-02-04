@@ -1,13 +1,14 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing import List, Optional
 import google.generativeai as genai
 import os, re, requests
 from dotenv import load_dotenv
 import warnings
+from datetime import datetime
 
 # Suppress deprecation warning
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -88,13 +89,16 @@ def root():
 
 
 @app.post("/")
-def root_honeypot(
-    req: Optional[RequestPayload] = None,
+async def root_honeypot(
+    request: Request,
     x_api_key: str = Header(None)
 ):
-    # If no body provided, create a default test request
-    if req is None:
-        from datetime import datetime
+    # Try to parse the request body
+    try:
+        body = await request.json()
+        req = RequestPayload(**body)
+    except:
+        # If no valid body provided, create a default test request
         req = RequestPayload(
             sessionId="tester-session",
             message=ChatMessage(

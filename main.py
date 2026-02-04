@@ -52,6 +52,22 @@ app.add_middleware(
 session_data = {}
 
 # ----------------------------
+# INPUT SCHEMA
+# ----------------------------
+class ChatMessage(BaseModel):
+    sender: str
+    text: str
+    timestamp: int
+
+
+class RequestPayload(BaseModel):
+    sessionId: str
+    message: ChatMessage
+    conversationHistory: List[ChatMessage] = []
+    metadata: Optional[dict] = None
+
+
+# ----------------------------
 # HEALTH CHECK & INFO ENDPOINTS
 # ----------------------------
 @app.get("/")
@@ -82,21 +98,6 @@ def root_honeypot(
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "AI Scam Honeypot Agent"}
-
-# ----------------------------
-# INPUT SCHEMA
-# ----------------------------
-class ChatMessage(BaseModel):
-    sender: str
-    text: str
-    timestamp: int
-
-
-class RequestPayload(BaseModel):
-    sessionId: str
-    message: ChatMessage
-    conversationHistory: List[ChatMessage] = []
-    metadata: Optional[dict] = None
 
 
 # ----------------------------

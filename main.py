@@ -20,9 +20,17 @@ load_dotenv()
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 SECRET_KEY = os.getenv("SECRET_API_KEY")
 
+print(f"DEBUG: GEMINI_KEY exists: {bool(GEMINI_KEY)}")
+print(f"DEBUG: SECRET_KEY exists: {bool(SECRET_KEY)}")
+
 if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel("models/gemini-flash-latest")
+    try:
+        genai.configure(api_key=GEMINI_KEY)
+        model = genai.GenerativeModel("models/gemini-flash-latest")
+        print("DEBUG: Model initialized successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to initialize model: {e}")
+        model = None
 else:
     print("Warning: GEMINI_API_KEY not found in .env")
     model = None
@@ -114,7 +122,11 @@ def detect_scam(msg):
 # AI AGENT RESPONSE
 # ----------------------------
 def agent_reply(history_text):
-    prompt = f"""
+    if not model:
+        return "Agent not available - model not initialized"
+    
+    try:
+        prompt = f"""
 You are an autonomous AI Honeypot Agent.
 
 Role:
@@ -128,9 +140,11 @@ Conversation so far:
 
 Reply with ONE realistic message only.
 """
-
-    response = model.generate_content(prompt)
-    return response.text.strip()
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"ERROR in agent_reply: {e}")
+        return f"Error generating response: {str(e)}"
 
 
 # ----------------------------
@@ -161,9 +175,12 @@ def honeypot_endpoint(
 ):
     # ✅ Authentication
     if x_api_key != SECRET_KEY:
+        print(f"DEBUG: API key mismatch. Got: {x_api_key}, Expected: {SECRET_KEY}")
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
     try:
+        print(f"DEBUG: Processing request for session {req.sessionId}")
+        
         sessionId = req.sessionId
 
         # Build conversation text
@@ -176,6 +193,7 @@ def honeypot_endpoint(
 
         # Scam detection
         scamDetected = detect_scam(req.message.text)
+        print(f"DEBUG: Scam detected: {scamDetected}")
 
         if not scamDetected:
             return {
@@ -191,10 +209,13 @@ def honeypot_endpoint(
             }
 
         # ✅ Agent Activated
+        print("DEBUG: Activating agent...")
         reply = agent_reply(history_text)
+        print(f"DEBUG: Agent reply generated: {reply[:50]}...")
 
         # Extract intelligence
         intel = extract_intel(history_text)
+        print(f"DEBUG: Extracted intelligence: {intel}")
 
         # Save session
         session_data[sessionId] = {
@@ -218,4 +239,7 @@ def honeypot_endpoint(
             "extractedIntelligence": intel
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERROR in honeypot_endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")

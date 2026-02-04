@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import google.generativeai as genai
@@ -29,6 +30,15 @@ else:
 GUVI_CALLBACK = "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory session store
 session_data = {}
@@ -153,56 +163,59 @@ def honeypot_endpoint(
     if x_api_key != SECRET_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    sessionId = req.sessionId
+    try:
+        sessionId = req.sessionId
 
-    # Build conversation text
-    history_text = ""
-    for msg in req.conversationHistory:
-        history_text += f"{msg.sender}: {msg.text}\n"
-    history_text += f"{req.message.sender}: {req.message.text}\n"
+        # Build conversation text
+        history_text = ""
+        for msg in req.conversationHistory:
+            history_text += f"{msg.sender}: {msg.text}\n"
+        history_text += f"{req.message.sender}: {req.message.text}\n"
 
-    total_turns = len(req.conversationHistory) + 1
+        total_turns = len(req.conversationHistory) + 1
 
-    # Scam detection
-    scamDetected = detect_scam(req.message.text)
+        # Scam detection
+        scamDetected = detect_scam(req.message.text)
 
-    if not scamDetected:
+        if not scamDetected:
+            return {
+                "scamDetected": False,
+                "agentActivated": False,
+                "reply": "Okay, thank you.",
+                "engagementMetrics": {
+                    "sessionId": sessionId,
+                    "totalTurns": total_turns,
+                    "engagementActive": False
+                },
+                "extractedIntelligence": {}
+            }
+
+        # ✅ Agent Activated
+        reply = agent_reply(history_text)
+
+        # Extract intelligence
+        intel = extract_intel(history_text)
+
+        # Save session
+        session_data[sessionId] = {
+            "intel": intel,
+            "turns": total_turns
+        }
+
+        # ✅ Callback after enough engagement
+        if total_turns >= 5:
+            send_final_callback(sessionId, intel, total_turns)
+
         return {
-            "scamDetected": False,
-            "agentActivated": False,
-            "reply": "Okay, thank you.",
+            "scamDetected": True,
+            "agentActivated": True,
+            "reply": reply,
             "engagementMetrics": {
                 "sessionId": sessionId,
                 "totalTurns": total_turns,
-                "engagementActive": False
+                "engagementActive": True
             },
-            "extractedIntelligence": {}
+            "extractedIntelligence": intel
         }
-
-    # ✅ Agent Activated
-    reply = agent_reply(history_text)
-
-    # Extract intelligence
-    intel = extract_intel(history_text)
-
-    # Save session
-    session_data[sessionId] = {
-        "intel": intel,
-        "turns": total_turns
-    }
-
-    # ✅ Callback after enough engagement
-    if total_turns >= 5:
-        send_final_callback(sessionId, intel, total_turns)
-
-    return {
-        "scamDetected": True,
-        "agentActivated": True,
-        "reply": reply,
-        "engagementMetrics": {
-            "sessionId": sessionId,
-            "totalTurns": total_turns,
-            "engagementActive": True
-        },
-        "extractedIntelligence": intel
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

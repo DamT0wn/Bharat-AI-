@@ -93,10 +93,18 @@ async def root_honeypot(
     request: Request,
     x_api_key: str = Header(None)
 ):
+    # Log the raw request
+    try:
+        raw_body = await request.body()
+        print(f"DEBUG: Raw body bytes: {raw_body}")
+    except Exception as e:
+        print(f"ERROR: Could not read raw body: {e}")
+    
     # Try to parse the request body
     try:
         body = await request.json()
-        print(f"DEBUG: Raw request body: {body}")
+        print(f"DEBUG: Parsed JSON body: {body}")
+        print(f"DEBUG: Received API key: {x_api_key}")
         
         # Ensure metadata exists
         if "metadata" not in body:
@@ -104,13 +112,28 @@ async def root_honeypot(
         
         req = RequestPayload(**body)
         print(f"DEBUG: Successfully parsed RequestPayload")
+        
+        # Call the honeypot endpoint
+        response = honeypot_endpoint(req, x_api_key)
+        print(f"DEBUG: Response being sent: {response}")
+        return response
+        
     except ValidationError as e:
-        print(f"ERROR: Validation failed: {e}")
-        print(f"ERROR: Body was: {body}")
-        raise HTTPException(status_code=400, detail=f"Invalid request body: {str(e)}")
+        error_detail = str(e)
+        print(f"ERROR: Validation failed: {error_detail}")
+        return {
+            "error": "INVALID_REQUEST_BODY",
+            "detail": error_detail,
+            "receivedBody": body if 'body' in locals() else "Could not parse"
+        }
     except Exception as e:
         print(f"ERROR: Failed to parse request: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid request format: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": "INVALID_REQUEST_FORMAT",
+            "detail": str(e)
+        }
     
     return honeypot_endpoint(req, x_api_key)
 

@@ -3,216 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛡 AI Scam Honeypot Agent</title>
+    <title>AI Scam Honeypot Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink-900: #101418;
+            --ink-700: #2b333b;
+            --ink-500: #5a6672;
+            --surface: #ffffff;
+            --surface-2: #f4f6f8;
+            --surface-3: #eef1f5;
+            --accent-600: #1f6feb;
+            --accent-500: #2a7bff;
+            --accent-300: #8cc6ff;
+            --success: #1f9d55;
+            --danger: #d64545;
+            --shadow-lg: 0 30px 70px rgba(10, 18, 29, 0.25);
+            --shadow-md: 0 18px 40px rgba(12, 20, 30, 0.18);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: "Space Grotesk", "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top left, #f0f6ff 0%, #e6eef9 28%, #d8e2f3 55%, #c9d4eb 100%);
+            color: var(--ink-900);
             min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
+            justify-content: center;
+            padding: 28px;
         }
-        
+
+        .background-orb {
+            position: fixed;
+            width: 360px;
+            height: 360px;
+            background: radial-gradient(circle, rgba(42, 123, 255, 0.18), rgba(42, 123, 255, 0));
+            top: -120px;
+            right: -90px;
+            pointer-events: none;
+        }
+
         .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 700px;
             width: 100%;
-            padding: 40px;
+            max-width: 880px;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            position: relative;
+            animation: floatIn 0.7s ease;
         }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-            font-size: 2.5em;
+
+        .hero {
+            padding: 36px 40px 24px;
+            background: linear-gradient(135deg, rgba(31, 111, 235, 0.12), rgba(140, 198, 255, 0.2));
         }
-        
+
+        .hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--ink-900);
+        }
+
         .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
+            font-size: 1.05rem;
+            color: var(--ink-700);
+            margin-top: 8px;
+            max-width: 540px;
         }
-        
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #0f172a;
+            color: #ffffff;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .content {
+            padding: 28px 40px 40px;
+        }
+
+        .session-info {
+            background: var(--surface-2);
+            border: 1px solid rgba(16, 20, 24, 0.08);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            color: var(--ink-500);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 22px;
         }
-        
+
         label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
+            margin-bottom: 10px;
+            color: var(--ink-700);
             font-weight: 600;
-            font-size: 1.05em;
+            font-size: 1rem;
         }
-        
+
         textarea {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1em;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 14px 16px;
+            border: 1.5px solid rgba(16, 20, 24, 0.12);
+            border-radius: var(--radius-md);
+            background: var(--surface-3);
+            font-size: 1rem;
+            font-family: "Space Grotesk", "Segoe UI", sans-serif;
             resize: vertical;
-            min-height: 150px;
-            transition: border-color 0.3s;
+            min-height: 160px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        
+
         textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-500);
+            box-shadow: 0 0 0 4px rgba(42, 123, 255, 0.18);
+            background: #ffffff;
         }
-        
+
         .button-group {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
         }
-        
+
         button {
-            flex: 1;
-            padding: 12px 25px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 8px;
-            font-size: 1.05em;
+            border-radius: 999px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        
+
         .test-btn {
-            background: #667eea;
-            color: white;
+            background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
+            color: #ffffff;
+            box-shadow: var(--shadow-md);
         }
-        
+
         .test-btn:hover {
-            background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 20px 40px rgba(31, 111, 235, 0.25);
         }
-        
+
         .test-btn:disabled {
-            background: #ccc;
+            background: #cfd6e4;
             cursor: not-allowed;
+            box-shadow: none;
             transform: none;
         }
-        
+
         .clear-btn {
-            background: #f5f5f5;
-            color: #333;
-            border: 2px solid #e0e0e0;
+            background: #ffffff;
+            color: var(--ink-700);
+            border: 1.5px solid rgba(16, 20, 24, 0.12);
         }
-        
+
         .clear-btn:hover {
-            background: #e8e8e8;
+            background: var(--surface-2);
+            transform: translateY(-1px);
         }
-        
+
         .response-section {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
+            margin-top: 26px;
+            padding-top: 22px;
+            border-top: 1px solid rgba(16, 20, 24, 0.08);
         }
-        
+
         .response-section h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3em;
+            color: var(--ink-900);
+            margin-bottom: 14px;
+            font-size: 1.2rem;
         }
-        
+
         .response-box {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            border-left: 4px solid #667eea;
-            max-height: 400px;
+            background: #0f172a;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            border: 1px solid rgba(140, 198, 255, 0.25);
+            max-height: 380px;
             overflow-y: auto;
         }
-        
+
         .response-box pre {
-            color: #333;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+            color: #d6e4ff;
+            font-family: "IBM Plex Mono", "Courier New", monospace;
+            font-size: 0.9rem;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        
+
         .loading {
             text-align: center;
-            color: #667eea;
+            color: var(--accent-600);
             font-weight: 600;
         }
-        
+
         .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #c33;
+            background: rgba(214, 69, 69, 0.1);
+            color: var(--danger);
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 18px;
+            border: 1px solid rgba(214, 69, 69, 0.25);
         }
-        
+
         .success {
-            background: #efe;
-            color: #3a3;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #3a3;
+            background: rgba(31, 157, 85, 0.12);
+            color: var(--success);
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 18px;
+            border: 1px solid rgba(31, 157, 85, 0.25);
         }
-        
-        .session-info {
-            background: #f0f4ff;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.95em;
-            color: #555;
+
+        .hint {
+            font-size: 0.92rem;
+            color: var(--ink-500);
+            margin-top: 6px;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            font-size: 0.88rem;
+            color: var(--ink-500);
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 16px;
+            }
+
+            .hero,
+            .content {
+                padding: 24px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="background-orb"></div>
     <div class="container">
-        <h1>🛡 AI Scam Honeypot Agent</h1>
-        <p class="subtitle">Detect and engage scammers autonomously</p>
-        
-        <div class="session-info">
-            <strong>Session ID:</strong> <span id="sessionId"></span>
+        <div class="hero">
+            <div class="hero-top">
+                <div>
+                    <h1 class="title">AI Scam Honeypot Agent</h1>
+                    <p class="subtitle">Detect, disarm, and document scam attempts with a calm, autonomous responder.</p>
+                </div>
+                <span class="pill">LIVE DEMO</span>
+            </div>
         </div>
-        
-        <form id="honeypotForm">
-            <div class="form-group">
-                <label for="message">Enter Scam Message:</label>
-                <textarea 
-                    id="message" 
-                    placeholder="Paste the scam message here (e.g., 'Your account is blocked. Send money to unblock...')"
-                    required
-                ></textarea>
+
+        <div class="content">
+            <div class="session-info">
+                <strong>Session ID:</strong> <span id="sessionId"></span>
             </div>
-            
-            <div class="button-group">
-                <button type="submit" class="test-btn">Test Honeypot Agent</button>
-                <button type="button" class="clear-btn" onclick="clearForm()">Clear</button>
+
+            <form id="honeypotForm">
+                <div class="form-group">
+                    <label for="message">Enter Scam Message</label>
+                    <textarea
+                        id="message"
+                        placeholder="Paste the scam message here (e.g., 'Your account is blocked. Send money to unblock...')"
+                        required
+                    ></textarea>
+                    <div class="hint">Tip: Try a phishing email, SMS lure, or fake payment request.</div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="test-btn">Test Honeypot Agent</button>
+                    <button type="button" class="clear-btn" onclick="clearForm()">Clear</button>
+                </div>
+            </form>
+
+            <div id="messageContainer"></div>
+
+            <div class="response-section" id="responseSection" style="display: none;">
+                <h2>Agent Response</h2>
+                <div class="response-box">
+                    <pre id="responseContent"></pre>
+                </div>
             </div>
-        </form>
-        
-        <div id="messageContainer"></div>
-        
-        <div class="response-section" id="responseSection" style="display: none;">
-            <h2>🔍 Agent Response:</h2>
-            <div class="response-box">
-                <pre id="responseContent"></pre>
-            </div>
+
+            <div class="footer-note">Built to keep interactions safe while preserving evidence for review.</div>
         </div>
     </div>
 
